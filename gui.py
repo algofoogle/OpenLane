@@ -16,6 +16,7 @@
 import click
 
 import os
+import shlex
 import subprocess
 import glob
 
@@ -65,7 +66,7 @@ def gui(viewer, format, run_dir, stage):
         extra_config = {}
         if stage is not None:
             matches = glob.glob(os.path.join(run_dir, "results", stage, f"*.{format}"))
-            if matches is []:
+            if matches == []:
                 err(f"No {format} found for stage {stage}")
             else:
                 extra_config[f"CURRENT_{format.upper()}"] = matches[0]
@@ -94,10 +95,9 @@ def gui(viewer, format, run_dir, stage):
             else:
                 layout = matches[0]
 
-        subprocess.check_call(
+        run_env = os.environ.copy()
+        run_env["KLAYOUT_ARGV"] = shlex.join(
             [
-                "python3",
-                "./scripts/klayout/open_design.py",
                 "--input-lef",
                 run_config["MERGED_LEF"],
                 "--lyt",
@@ -108,6 +108,22 @@ def gui(viewer, format, run_dir, stage):
                 run_config["KLAYOUT_DEF_LAYER_MAP"],
                 layout,
             ]
+        )
+        pythonpath = subprocess.check_output(
+            [
+                "python3",
+                "-c",
+                "import click; import os; print(os.path.dirname(click.__path__[0])); print(1)",
+            ]
+        ).decode()
+        run_env["PYTHONPATH"] = pythonpath
+        subprocess.check_call(
+            [
+                "klayout",
+                "-rm",
+                "./scripts/klayout/open_design.py",
+            ],
+            env=run_env,
         )
 
 

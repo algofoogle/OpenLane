@@ -21,9 +21,9 @@ proc throw_error {} {
     }
 }
 
-proc handle_deprecated_config {old new} {
+proc handle_deprecated_config {old new {default ""}} {
     if { [info exists ::env($old)] } {
-        puts_warn "$old is now deprecated; use $new instead."
+        puts_warn "The variable name $old was renamed to $new\. Update your configuration file."
 
         if { ! [info exists ::env($new)] } {
             set ::env($new) $::env($old)
@@ -32,6 +32,10 @@ proc handle_deprecated_config {old new} {
             puts_err "Conflicting values of $new and $old; please remove $old from your design configurations"
             throw_error
         }
+    } elseif { [info exists ::env($new)] } {
+        # That's fine
+    } elseif { $default != "" } {
+        set ::env($new) $default
     }
 }
 
@@ -508,9 +512,9 @@ proc manipulate_layout {args} {
     set_if_unset arg_values(-indexed_log) /dev/null
     set_if_unset arg_values(-input) $::env(CURRENT_ODB)
     set_if_unset arg_values(-output) $arg_values(-input)
-    set_if_unset arg_values(-output_def) /dev/null
+    set_if_unset arg_values(-output_def) [file rootname $arg_values(-output)].def
 
-    try_exec $::env(OPENROAD_BIN) -exit -no_init -python\
+    run_odbpy_script\
         {*}$args \
         --input-lef $::env(MERGED_LEF) \
         --output-def $arg_values(-output_def) \
@@ -686,6 +690,7 @@ proc run_tcl_script {args} {
 
         catch_exec {*}$args
         if { $exec_result(exit_code) } {
+            set exit_code $exec_result(exit_code)
             set print_error_msg "during executing $tool script $script"
             set log_relpath [relpath $::env(PWD) $arg_values(-indexed_log)]
 
@@ -764,7 +769,9 @@ proc run_tcl_script {args} {
             } elseif { $element == "sdc" } {
                 set_sdc $::env(SAVE_SDC)
             } elseif { $element == "netlist" } {
-                set_netlist -lec $::env(SAVE_NETLIST)
+                set_netlist $::env(SAVE_NETLIST)
+            } elseif { $element == "guide" } {
+                set_guide $::env(SAVE_GUIDE)
             } else {
                 set ::env(${current_env}) $::env(${save_env})
             }
@@ -773,4 +780,8 @@ proc run_tcl_script {args} {
     }
 }
 
-package provide openlane_utils 0.9
+proc run_odbpy_script {args} {
+    set ::env(PYTHONPATH) [exec python3 -c "import sys; import site; print(':'.join(site.getsitepackages() + sys.path), end='')"]
+    try_exec $::env(OPENROAD_BIN) -exit -no_init -python {*}$args
+    unset ::env(PYTHONPATH)
+}

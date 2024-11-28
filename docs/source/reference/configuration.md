@@ -78,14 +78,13 @@ files you may be depending on, including headers, in `VERILOG_FILES`.
 |-|-|
 | `SYNTH_AUTONAME` <a id="SYNTH_AUTONAME"></a> | Add a synthesis step to generate names for instances. This results in instance names that can be very long, but may be more useful than the internal names that are six digit numbers. <br> Enabled = 1, Disabled = 0 <br> (Default: `0`)|
 | `SYNTH_BIN` <a id="SYNTH_BIN"></a> | The yosys binary used in the flow. <br> (Default: `yosys`) |
-| `SYNTH_DEFINES` <a id="SYNTH_DEFINES"></a> | Specifies verilog defines. Variable should be provided as a json/tcl list. <br> (Default: NONE) |
+| `SYNTH_DEFINES` <a id="SYNTH_DEFINES"></a> | Specifies verilog defines. Variable should be provided as a json/tcl list. <br> (Default: None) |
 | `SYNTH_CLOCK_UNCERTAINTY` <a id="SYNTH_CLOCK_UNCERTAINTY"></a>  | Specifies a value for the clock uncertainty/jitter for timing analysis. <br> (Default: `0.25`) |
 | `SYNTH_CLOCK_TRANSITION` <a id="SYNTH_CLOCK_TRANSITION"></a>  |  Specifies a value for the clock transition /slew for timing analysis. <br> (Default: `0.15`) |
 | `SYNTH_TIMING_DERATE` <a id="SYNTH_TIMING_DERATE"></a>  | Specifies a derating factor to multiply the path delays with. It specifies the upper and lower ranges of timing. <br> (Default: `+5%/-5%`) |
 | `SYNTH_STRATEGY` <a id="SYNTH_STRATEGY"></a> | Strategies for abc logic synthesis and technology mapping <br> Possible values are `DELAY/AREA 0-4/0-3`; the first part refers to the optimization target of the synthesis strategy (area vs. delay) and the second one is an index. <br> (Default: `AREA 0`)|
 | `SYNTH_BUFFERING` <a id="SYNTH_BUFFERING"></a> | Enables abc cell buffering <br> Enabled = 1, Disabled = 0 <br> (Default: `1`)|
 | `SYNTH_SIZING` <a id="SYNTH_SIZING"></a> | Enables abc cell sizing (instead of buffering) <br> Enabled = 1, Disabled = 0 <br> (Default: `0`)|
-| `SYNTH_READ_BLACKBOX_LIB` <a id="SYNTH_READ_BLACKBOX_LIB"></a> | A flag that enable reading the full(untrimmed) liberty file as a blackbox for synthesis. Please note that this is not used in technology mapping. This should only be used when trying to preserve gate instances in the rtl of the design.  <br> Enabled = 1, Disabled = 0 <br> (Default: `0`)|
 | `SYNTH_NO_FLAT` <a id="SYNTH_NO_FLAT"></a> | A flag that disables flattening the hierarchy during synthesis, only flattening it after synthesis, mapping and optimizations. <br> Enabled = 1, Disabled = 0 <br> (Default: `0`)|
 | `SYNTH_SHARE_RESOURCES` <a id="SYNTH_SHARE_RESOURCES"></a> | A flag that enables yosys to reduce the number of cells by determining shareable resources and merging them. <br> Enabled = 1, Disabled = 0 <br> (Default: `1`)|
 | `SYNTH_ABC_LEGACY_REFACTOR` <a id="SYNTH_ABC_LEGACY_REFACTOR"></a> | Replaces the ABC command `drf -l` with `refactor` which matches older versions of OpenLane but is more unstable.  <br> Enabled = 1, Disabled = 0 <br> (Default: `0`) |
@@ -102,12 +101,13 @@ files you may be depending on, including headers, in `VERILOG_FILES`.
 | `SYNTH_TOP_LEVEL` <a id="SYNTH_TOP_LEVEL"></a> | **Deprecated: Use `SYNTH_ELABORATE_ONLY`**: "Elaborate" the design only without attempting any logic mapping. Useful when dealing with structural Verilog netlists. |
 | `SYNTH_MAX_FANOUT` <a id="SYNTH_MAX_FANOUT"></a>  | **Deprecated: Use the PDK's `MAX_FANOUT_CONSTRAINT` value**: The max load that the output ports can drive. |
 | `SYNTH_MAX_TRAN` <a id="SYNTH_MAX_TRAN"></a> |  **Deprecated: Use the PDK's `MAX_TRANSITION_CONSTRAINT` value**: The max transition time (slew) from high to low or low to high on cell inputs in ns. If unset, the library's default maximum transition time will be used. |
+| `SYNTH_READ_BLACKBOX_LIB` <a id="SYNTH_READ_BLACKBOX_LIB"></a> | **Removed: The liberty file is always read now. A flag that enable reading the full(untrimmed) liberty file as a blackbox for synthesis. Please note that this is not used in technology mapping. This should only be used when trying to preserve gate instances in the rtl of the design.  <br> Enabled = 1, Disabled = 0 <br> (Default: `0`)|
 ## Static Timing Analysis (STA)
 
 | Variable | Description |
 |-|-|
 | `STA_REPORT_POWER` <a id="STA_REPORT_POWER"></a> | Enables reporting power in sta. <br> (Default: `1`) |
-| `EXTRA_SPEFS` <a id="EXTRA_SPEFS"></a> | Specifies min, nom, max spef files for modules(s). Variable should be provided as a json/tcl list or a space delimited tcl string. Note that a module name is provided not an instance name. A module may have multiple instances. Each module must have define 3 files, one for each corner. For example: `module1 min1 nom1 max1 module2 min2 nom2 max2`. A file can be used multiple time in case of absence of other corner files. For example: `module nom nom nom`. In this case, the nom file will be used in all corners of sta. At all times a module must specify 3 files.  <br> (Default: NONE) |
+| `EXTRA_SPEFS` <a id="EXTRA_SPEFS"></a> | Specifies min, nom, max spef files for modules(s). Variable should be provided as a json/tcl list or a space delimited tcl string. Note that a module name is provided not an instance name. A module may have multiple instances. Each module must have define 3 files, one for each corner. For example: `module1 min1 nom1 max1 module2 min2 nom2 max2`. A file can be used multiple time in case of absence of other corner files. For example: `module nom nom nom`. In this case, the nom file will be used in all corners of sta. At all times a module must specify 3 files.  <br> (Default: None) |
 | `STA_WRITE_LIB` <a id="STA_WRITE_LIB"></a> | Controls whether a timing model is written using OpenROAD OpenSTA after static timing analysis. This is an option as it in its current state, the timing model generation (and the model itself) can be quite buggy. <br> (Default: `1`) |
 
 ## Floorplanning (FP)
@@ -148,19 +148,20 @@ files you may be depending on, including headers, in `VERILOG_FILES`.
 | `FP_TAP_VERTICAL_HALO` <a id="FP_TAP_VERTICAL_HALO"></a> | Specify the vertical halo size around macros during tap insertion. The value provided is in microns. <br> (Default: set to the value of `FP_TAP_HORIZONTAL_HALO`) |
 | `FP_PDN_HORIZONTAL_HALO` <a id="FP_PDN_HORIZONTAL_HALO"></a> | Sets the horizontal halo around the macros during power grid insertion. The value provided is in microns. <br> (Default: `10`) |
 | `FP_PDN_VERTICAL_HALO` <a id="FP_PDN_VERTICAL_HALO"></a> | Sets the vertical halo around the macros during power grid insertion. The value provided is in microns. <br> (Default: set to the value of `FP_PDN_HORIZONTAL_HALO`) |
-| `DESIGN_IS_CORE` <a id="DESIGN_IS_CORE"></a> | Controls the layers used in the power grid. Depending on whether the design is the core of the chip or a macro inside the core. 1=Is a Core, 0=Is a Macro <br> (Default: `1`)|
-| `FP_PIN_ORDER_CFG` <a id="FP_PIN_ORDER_CFG"></a> | Points to the pin order configuration file to set the pins in specific directions (S, W, E, N). If not set, then the IO pins will be placed based on one of the other methods depending on the rest of the configurations. `$<number>` i.e. `$1` can be used to place a virtual pin where `<number>` is the count of virtual pins. This can create separation between pins. You can also use `@min_distance=<number>` i.e. `@min_distance=0.8` to set preferred min distance between pins in a specific direction. See spm configuration file as an example.<br> (Default: NONE)|
-| `FP_CONTEXT_DEF` <a id="FP_CONTEXT_DEF"></a> | Points to the parent DEF file that includes this macro/design and uses this DEF file to determine the best locations for the pins. It must be used with `FP_CONTEXT_LEF`, otherwise it's considered non-existing. If not set, then the IO pins will be placed based on one of the other methods depending on the rest of the configurations. <br> (Default: NONE)|
-| `FP_CONTEXT_LEF` <a id="FP_CONTEXT_LEF"></a> | Points to the parent LEF file that includes this macro/design and uses this LEF file to determine the best locations for the pins. It must be used with `FP_CONTEXT_DEF`, otherwise it's considered non-existing. If not set, then the IO pins will be placed based on one of the other methods depending on the rest of the configurations. <br> (Default: NONE)|
+| `FP_PDN_MULTILAYER` <a id="FP_PDN_MULTILAYER"></a> | Controls the layers used in the power grid. If set to `0` (Tcl)/`false` (JSON), only the lower, vertical layer will be used, which is useful when hardening a macro for integrating into a larger top-level design. <br> (Default: `1`)|
+| `FP_PIN_ORDER_CFG` <a id="FP_PIN_ORDER_CFG"></a> | Points to the pin order configuration file to set the pins in specific directions (S, W, E, N). If not set, then the IO pins will be placed based on one of the other methods depending on the rest of the configurations. `$<number>` i.e. `$1` can be used to place a virtual pin where `<number>` is the count of virtual pins. This can create separation between pins. You can also use `@min_distance=<number>` i.e. `@min_distance=0.8` to set preferred min distance between pins in a specific direction. See spm configuration file as an example.<br> (Default: None)|
+| `FP_CONTEXT_DEF` <a id="FP_CONTEXT_DEF"></a> | Points to the parent DEF file that includes this macro/design and uses this DEF file to determine the best locations for the pins. It must be used with `FP_CONTEXT_LEF`, otherwise it's considered non-existing. If not set, then the IO pins will be placed based on one of the other methods depending on the rest of the configurations. <br> (Default: None)|
+| `FP_CONTEXT_LEF` <a id="FP_CONTEXT_LEF"></a> | Points to the parent LEF file that includes this macro/design and uses this LEF file to determine the best locations for the pins. It must be used with `FP_CONTEXT_DEF`, otherwise it's considered non-existing. If not set, then the IO pins will be placed based on one of the other methods depending on the rest of the configurations. <br> (Default: None)|
 | `FP_DEF_TEMPLATE` <a id="FP_DEF_TEMPLATE"></a> | Points to the DEF file to be used as a template when running `apply_def_template`. This will be used to exctract pin names, locations, shapes -excluding power and ground pins- as well as the die area and replicate all this information in the `CURRENT_DEF`. |
 | `VDD_NETS` <a id="VDD_NETS"></a> | Specifies the power nets/pins to be used when creating the power grid for the design. |
 | `GND_NETS` <a id="GND_NETS"></a> | Specifies the ground nets/pins to be used when creating the power grid for the design. |
 | `SYNTH_USE_PG_PINS_DEFINES` <a id="SYNTH_USE_PG_PINS_DEFINES"></a> | Specifies the power guard used in the verilog source code to specify the power and ground pins. This is used to automatically extract `VDD_NETS` and `GND_NET` variables from the verilog, with the assumption that they will be order `inout vdd1, inout gnd1, inout vdd2, inout gnd2, ...`. |
 | `FP_IO_MIN_DISTANCE` <a id="FP_IO_MIN_DISTANCE"></a>  | The minmimum distance between the IOs in microns. <br> (Default: `3`) |
-| `FP_PADFRAME_CFG` <a id="FP_PADFRAME_CFG"></a>  | A configuration file passed to padringer, a padframe generator. <br> (Default: NONE) |
+| `FP_PADFRAME_CFG` <a id="FP_PADFRAME_CFG"></a>  | A configuration file passed to padringer, a padframe generator. <br> (Default: None) |
 | `PDN_CFG` <a id="PDN_CFG"></a> | **Deprecated: Use `FP_PDN_CFG`**: Points to a PDN configuration file that describes how to construct the PDN in detail. |
 | `FP_HORIZONTAL_HALO` <a id="FP_HORIZONTAL_HALO"></a> | **Deprecated: Use `FP_PDN_HORIZONTAL_HALO`**: Sets the horizontal halo around the macros during power grid insertion. The value provided is in microns.|
 | `FP_PDN_VERTICAL_HALO` <a id="FP_PDN_VERTICAL_HALO"></a> | **Deprecated: Use `FP_PDN_VERTICAL_HALO`**: Sets the vertical halo around the macros during power grid insertion. The value provided is in microns. |
+| `DESIGN_IS_CORE` <a id="DESIGN_IS_CORE"></a> | **Deprecated as even macros can have a full-stack PDN if core rings are used: New variable is `FP_PDN_MULTILAYER`** Controls the layers used in the power grid. Depending on whether the design is the core of the chip or a macro inside the core. 1=Is a Core, 0=Is a Macro <br> (Default: `1`)|
 | `FP_PDN_IRDROP` <a id="FP_PDN_IRDROP"></a> | **Removed: No point running it this early in the flow**: Enable calculation of power grid IR drop during PDN generation. |
 
 ### Deprecated I/O Layer variables
@@ -367,7 +368,7 @@ For more information on integrating macros and other relevant configuration vari
 |Variable|Description|
 |-|-|
 | `RUN_IRDROP_REPORT` <a id="RUN_IRDROP_REPORT"></a> | Creates an IR Drop report using OpenROAD PSM. 1 = Enabled, 0 = Disabled. <br> (Default: `1`) |
-| `VSRC_LOC_FILES` <a id="VSRC_LOC_FILES"></a> | PSM loc file for power and ground nets. Variable should be provided as a json/tcl list or a space delimited tcl string as follows: `net1 file1 net2 file2`. See [this](https://github.com/The-OpenROAD-Project/OpenROAD/tree/master/src/psm#commands) for more info.<br> (Default: NONE)  |
+| `VSRC_LOC_FILES` <a id="VSRC_LOC_FILES"></a> | Map of voltage source nets to OpenROAD PSM location files. Variable should be provided as a Tcl dict, i.e.: `net1 file1 net2 file2`. See [this](https://github.com/The-OpenROAD-Project/OpenROAD/tree/master/src/psm#commands) for more info. <br> (Default: None)  |
 
 ## Signoff
 
@@ -450,7 +451,6 @@ For more information on integrating macros and other relevant configuration vari
 
 |Variable|Description|
 |-|-|
-| `LEC_ENABLE` <a id="LEC_ENABLE"></a> | Enables logic verification using yosys, for comparing each netlist at each stage of the flow with the previous netlist and verifying that they are logically equivalent. Warning: this will increase the runtime significantly. 1 = Enabled, 0 = Disabled <br> (Default: `0`)|
 | `GENERATE_FINAL_SUMMARY_REPORT` <a id="GENERATE_FINAL_SUMMARY_REPORT"></a> | Specifies whether or not to generate a final summary report after the run is completed. Check command `generate_final_summary_report`. 1 = Enabled, 0 = Disabled. <br> (Default: `1`) |
 | `USE_GPIO_PADS` <a id="USE_GPIO_PADS"></a> | Decides whether or not to use the gpio pads in routing by merging their LEF file set in `::env(USE_GPIO_ROUTING_LEF)` and blackboxing their verilog modules set in `::env(GPIO_PADS_VERILOG)`. 1 = Enabled, 0 = Disabled. <br> (Default: `0`) |
 | `TAP_DECAP_INSERTION` <a id="TAP_DECAP_INSERTION"></a> | **Deprecated: Use `RUN_TAP_DECAP_INSERTION`**: Enables tap and decap cells insertion after floorplanning. 1 = Enabled, 0 = Disabled. |
@@ -468,3 +468,4 @@ For more information on integrating macros and other relevant configuration vari
 | `QUIT_ON_MISMATCHES` <a id="QUIT_ON_MISMATCHES"></a> | **Removed: See `./flow.tcl -ignore_mismatches`**: Whether to halt the flow execution or not if `TEST_MISMATCHES` is enabled and any mismatches are found. |
 | `KLAYOUT_XOR_GDS` <a id="KLAYOUT_XOR_GDS"></a> | **Removed: GDS always generated**: If `RUN_KLAYOUT_XOR` is enabled, this will enable producing a GDS output from the XOR along with it's PNG export. 1 = Enabled, 0 = Disabled.|
 | `KLAYOUT_XOR_XML` <a id="KLAYOUT_XOR_XML"></a> | **Removed: XML always generated**: If `RUN_KLAYOUT_XOR` is enabled, this will enable producing an XML output from the XOR. 1 = Enabled, 0 = Disabled. |
+| `LEC_ENABLE` <a id="LEC_ENABLE"></a> | **Removed: buggy** Enables logic verification using yosys, for comparing each netlist at each stage of the flow with the previous netlist and verifying that they are logically equivalent. Warning: this will increase the runtime significantly. 1 = Enabled, 0 = Disabled <br> (Default: `0`)|

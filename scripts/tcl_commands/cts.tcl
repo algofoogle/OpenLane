@@ -48,7 +48,7 @@ proc run_cts {args} {
         scrot_klayout -layout $::env(CURRENT_DEF) -log $::env(cts_logs)/screenshot.log
 
         if { [info exists ::env(CTS_REPORT_TIMING)] && $::env(CTS_REPORT_TIMING) } {
-            run_sta -estimate_placement -no_save $::env(cts_results) -log $::env(cts_logs)/cts_sta.log
+            run_sta -propagate_all_clocks -estimate_placement -no_save $::env(cts_results) -log $::env(cts_logs)/cts_sta.log
         }
     }
 }
@@ -71,6 +71,3 @@ proc run_resizer_timing {args} {
         puts_info "Skipping Placement Resizer Timing Optimizations."
     }
 }
-
-
-package provide openlane 0.9

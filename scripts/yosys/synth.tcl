@@ -40,11 +40,8 @@ if {[info exist ::env(VERILOG_INCLUDE_DIRS)]} {
     set vIdirsArgs [join $vIdirsArgs]
 }
 
-if { $::env(SYNTH_READ_BLACKBOX_LIB) } {
-    log "Reading $::env(LIB_SYNTH_COMPLETE_NO_PG) as a blackbox"
-    foreach lib $::env(LIB_SYNTH_COMPLETE_NO_PG) {
-        read_liberty -lib -ignore_miss_dir -setattr blackbox $lib
-    }
+foreach lib $::env(LIB_SYNTH_COMPLETE) {
+    read_liberty -lib -ignore_miss_dir -setattr blackbox $lib
 }
 
 if { [info exists ::env(EXTRA_LIBS) ] } {
@@ -223,7 +220,7 @@ if { !($adder_type in [list "YOSYS" "FA" "RCA" "CSA"]) } {
 
 # Start Synthesis
 for { set i 0 } { $i < [llength $::env(VERILOG_FILES)] } { incr i } {
-    read_verilog -sv {*}$vIdirsArgs [lindex $::env(VERILOG_FILES) $i]
+    read_verilog -defer -sv {*}$vIdirsArgs [lindex $::env(VERILOG_FILES) $i]
 }
 
 if { [info exists ::env(SYNTH_PARAMETERS) ] } {
@@ -235,11 +232,11 @@ if { [info exists ::env(SYNTH_PARAMETERS) ] } {
 }
 
 
+hierarchy -check -top $vtop
 select -module $vtop
 show -format dot -prefix $::env(synthesis_tmpfiles)/hierarchy
 select -clear
 
-hierarchy -check -top $vtop
 yosys rename -top $vtop
 
 # Infer tri-state buffers.
@@ -413,11 +410,14 @@ proc run_strategy {output script strategy_name {postfix_with_strategy 0}} {
         autoname
     }
 
+    set output_json $::env(synthesis_tmpfiles)/$::env(DESIGN_NAME).json
     if { $postfix_with_strategy } {
         set output "$output.$strategy_escaped.nl.v"
+        set output_json $::env(synthesis_tmpfiles)/$::env(DESIGN_NAME).$strategy_escaped.json
     }
 
     write_verilog -noattr -noexpr -nohex -nodec -defparam $output
+    write_json $output_json
     design -reset
 }
 design -save checkpoint

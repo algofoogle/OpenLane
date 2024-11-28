@@ -22,10 +22,8 @@ set gl_ext      ".gl.v"
 set timing_ext  ".timing.txt"
 set abc_ext     ".abc"
 
-if { $::env(SYNTH_READ_BLACKBOX_LIB) } {
-	foreach lib $::env(LIB_SYNTH_COMPLETE_NO_PG) {
-		read_liberty -lib -ignore_miss_dir -setattr blackbox $lib
-	}
+foreach lib $::env(LIB_SYNTH_COMPLETE) {
+    read_liberty -lib -ignore_miss_dir -setattr blackbox $lib
 }
 
 if { [info exists ::env(EXTRA_LIBS) ] } {
@@ -57,7 +55,7 @@ if { [info exists ::env(VERILOG_FILES_BLACKBOX)] } {
 
 
 for { set i 0 } { $i < [llength $::env(VERILOG_FILES)] } { incr i } {
-	read_verilog {*}$vIdirsArgs [lindex $::env(VERILOG_FILES) $i]
+	read_verilog -defer {*}$vIdirsArgs [lindex $::env(VERILOG_FILES) $i]
 }
 
 if { [info exists ::env(SYNTH_PARAMETERS) ] } {
@@ -68,11 +66,11 @@ if { [info exists ::env(SYNTH_PARAMETERS) ] } {
 	}
 }
 
+hierarchy -check -top $vtop
 select -module $vtop
 show -format dot -prefix $::env(synthesis_tmpfiles)/hierarchy
 select -clear
 
-hierarchy -check -top $vtop
 yosys rename -top $vtop
 if { $::env(SYNTH_FLAT_TOP) } {
 	flatten
@@ -90,3 +88,4 @@ opt_clean -purge
 tee -o "$::env(synth_report_prefix)$chk_ext" check
 tee -o "$::env(synth_report_prefix)$stat_ext" stat -top $vtop -liberty $sclib
 write_verilog -noattr -noexpr -nohex -nodec -defparam "$::env(SAVE_NETLIST)"
+write_json $::env(synthesis_tmpfiles)/$::env(DESIGN_NAME).json

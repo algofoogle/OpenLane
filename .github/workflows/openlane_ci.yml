@@ -55,29 +55,14 @@ jobs:
 
           python3 -m pip install --upgrade --no-cache-dir volare>=0.12.3
           export OPDKS_VER="$(python3 ./dependencies/tool.py open_pdks -f commit)"
-          if [ "${{ vars.VOLARE_REPO }}" != "" ]; then
-            volare enable_or_build\
-              --pdk $PDK_FAMILY\
-              --build-magic\
-              --also-push\
-              --owner ${{ vars.VOLARE_OWNER }}\
-              --repository ${{ vars.VOLARE_REPO }}\
-              -j$(nproc)\
-              $OPDKS_VER
-          else
-            volare enable_or_build\
-              --pdk $PDK_FAMILY\
-              --build-magic\
-              -j$(nproc)\
-              $OPDKS_VER
-          fi
+          volare enable --pdk $PDK_FAMILY $OPDKS_VER
 
       - name: Tarball PDK
         run: |
           tar -cf /tmp/${{ matrix.pdk }}.tar -C $PDK_ROOT/${{ matrix.pdk }} .
 
       - name: Upload PDK Tarball
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pdk-tarball-${{ matrix.pdk }}
           path: /tmp/${{ matrix.pdk }}.tar
@@ -141,12 +126,14 @@ jobs:
       matrix: ${{ fromJSON(needs.prepare_test_matrices.outputs.issue_regression_matrix) }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true
 
       - name: Set up environment variables
         uses: ./.github/actions/set_env_variables
 
       - name: Download Docker Image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-image-amd64
           path: /tmp
@@ -155,7 +142,7 @@ jobs:
         run: docker load --input /tmp/image-amd64.tar
 
       - name: Download PDK Tarball
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: pdk-tarball-sky130A
           path: /tmp
@@ -170,11 +157,13 @@ jobs:
         run: python3 -m pip install pyyaml
 
       - name: Run Issue Regression Test
-        run: cd ${GITHUB_WORKSPACE}/ &&  make run_issue_regression ISSUE_REGRESSION_DESIGN=${{ matrix.test }}
+        run: |
+          OPENLANE_IMAGE_NAME=efabless/openlane:current\
+            make run_issue_regression ISSUE_REGRESSION_DESIGN=${{ matrix.test }}
 
       - name: Upload Logs
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test_${{ matrix.test }}_logs
           path: ./test_logs
@@ -196,7 +185,7 @@ jobs:
         uses: ./.github/actions/set_env_variables
 
       - name: Download Docker Image (amd64)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-image-amd64
           path: /tmp
@@ -205,7 +194,7 @@ jobs:
         run: docker load --input /tmp/image-amd64.tar
 
       - name: Download PDK Tarball
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: pdk-tarball-${{ matrix.design.pdk }}
           path: /tmp
@@ -229,10 +218,11 @@ jobs:
 
       - name: Run Test
         run: |
-          OPENLANE_IMAGE_NAME=$OPENLANE_IMAGE_NAME-amd64\
+          OPENLANE_IMAGE_NAME=efabless/openlane:current-amd64\
             python3 ${GITHUB_WORKSPACE}/.github/scripts/run_tests.py ${{ matrix.design.name }}
 
       - name: Escape Design Name
+        if: ${{ always() }}
         run: |
           design_name=${{ matrix.design.name }}
           escaped_design_name=${design_name//\//_}
@@ -240,7 +230,7 @@ jobs:
 
       - name: Upload Run Tarball
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ESCAPED_DESIGN_NAME }}-${{ matrix.design.pdk }}
           path: ./reproducible.tar.gz
@@ -264,17 +254,27 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+
       - name: Set up environment variables
         uses: ./.github/actions/set_env_variables
 
       - name: Download Docker Image (amd64)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-image-amd64
           path: /tmp
 
       - name: Download Docker Image (arm64v8)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-image-arm64v8
           path: /tmp
@@ -294,10 +294,6 @@ jobs:
         with:
           name: pdk-tarball
 
-      - name: Write Main Branch
-        run: |
-          echo "MAIN_BRANCH=${{ vars.MAIN_BRANCH }}" >> $GITHUB_ENV
-
       - name: Write Hash
         run: |
           echo "GIT_COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
@@ -310,7 +306,7 @@ jobs:
           done
 
       - name: Create Tag (If scheduled or dispatched)
-        if: ${{ env.PUSHING == '1' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && env.BRANCH_NAME == env.MAIN_BRANCH }}
+        if: ${{ env.PUSHING == '1' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (env.BRANCH_NAME == vars.MAIN_BRANCH || env.BRANCH_NAME == 'superstable') }}
         run: cd ${GITHUB_WORKSPACE}/ && python3 ${GITHUB_WORKSPACE}/.github/scripts/generate_tag.py
 
       - name: Tag Commit (If scheduled or dispatched)
@@ -333,7 +329,7 @@ jobs:
           echo "TAG_LIST=" >> $GITHUB_ENV
 
       - name: Docker Tag (Main Branch Hashes)
-        if: ${{ env.PUSHING == '1' && github.event_name == 'push' && env.BRANCH_NAME == env.MAIN_BRANCH }}
+        if: ${{ env.PUSHING == '1' && github.event_name == 'push' && env.BRANCH_NAME == vars.MAIN_BRANCH }}
         run: |
           echo "TAG_LIST=$TAG_LIST ${{ env.GIT_COMMIT_HASH }}" >> $GITHUB_ENV
 
@@ -352,7 +348,7 @@ jobs:
         run: |
           for tag in $TAG_LIST; do
             for arch in amd64 arm64v8; do
-              docker image tag ${{ env.OPENLANE_IMAGE_NAME }}-$arch ${{ vars.DOCKER_IMAGE }}:$tag-$arch
+              docker image tag efabless/openlane:current-$arch ${{ vars.DOCKER_IMAGE }}:$tag-$arch
               docker push ${{ vars.DOCKER_IMAGE }}:$tag-$arch
             done
             docker manifest create ${{ vars.DOCKER_IMAGE }}:$tag\

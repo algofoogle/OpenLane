@@ -1,4 +1,4 @@
-# Copyright 2020-2022 Efabless Corporation
+# Copyright 2020-2023 Efabless Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 proc convert_pg_pins {lib_in lib_out} {
     try_exec sed -E {s/^([[:space:]]+)pg_pin(.*)/\1pin\2\n\1    direction : "inout";/g} $lib_in > $lib_out
 }
@@ -36,10 +35,6 @@ proc run_yosys {args} {
     set_if_unset arg_values(-output) $::env(synthesis_results)/$::env(DESIGN_NAME).v
     set_if_unset arg_values(-indexed_log) /dev/null
 
-    if { [ info exists ::env(SYNTH_ADDER_TYPE)] && ($::env(SYNTH_ADDER_TYPE) in [list "RCA" "CSA"]) } {
-        set ::env(SYNTH_READ_BLACKBOX_LIB) 1
-    }
-
     set ::env(synth_report_prefix) [index_file $::env(synthesis_reports)/synthesis]
 
     set ::env(LIB_SYNTH_COMPLETE_NO_PG) [list]
@@ -63,7 +58,7 @@ proc run_yosys {args} {
 
 
     if { ! [info exists flags_map(-no_set_netlist)] } {
-        set_netlist -lec $::env(SAVE_NETLIST)
+        set_netlist $::env(SAVE_NETLIST)
     }
 
     # The following is a naive workaround to OpenROAD not accepting defparams.
@@ -131,6 +126,22 @@ proc run_synthesis {args} {
     TIMER::timer_stop
     exec echo "[TIMER::get_runtime]" | python3 $::env(SCRIPTS_DIR)/write_runtime.py "synthesis - yosys"
 
+    if { [info exists ::env(CLOCK_PORT)] && $::env(CLOCK_PORT) != "" } {
+        set missing_clock_ports [exec\
+            python3 $::env(SCRIPTS_DIR)/check_clock_ports.py\
+            --top $::env(DESIGN_NAME)\
+            --netlist-in $::env(synthesis_tmpfiles)/$::env(DESIGN_NAME).json\
+            {*}$::env(CLOCK_PORT)]
+        set ports_not_found 0
+        foreach {clock_port} $missing_clock_ports {
+            puts_err "The specified clock port '$clock_port' is not a valid input or inout port in the top level module."
+            set ports_not_found 1
+        }
+        if { $ports_not_found } {
+            throw_error
+        }
+    }
+
     if { $::env(QUIT_ON_ASSIGN_STATEMENTS) == 1 } {
         check_assign_statements $::env(CURRENT_NETLIST)
     }
@@ -174,10 +185,6 @@ proc verilog_elaborate {args} {
 }
 
 proc yosys_rewrite_verilog {filename} {
-    if { !$::env(LEC_ENABLE) } {
-        puts_verbose "Skipping Verilog rewrite (logic equivalency checks are disabled)..."
-        return
-    }
     if { !$::env(YOSYS_REWRITE_VERILOG) } {
         puts_verbose "Skipping Verilog rewrite..."
         return
@@ -198,49 +205,6 @@ proc yosys_rewrite_verilog {filename} {
 
     TIMER::timer_stop
     exec echo "[TIMER::get_runtime]" | python3 $::env(SCRIPTS_DIR)/write_runtime.py "verilog rewrite - yosys"
-}
-
-
-proc logic_equiv_check {args} {
-    set options {
-        {-lhs required}
-        {-rhs required}
-    }
-
-    set flags {}
-
-    set args_copy $args
-    parse_key_args "logic_equiv_check" args arg_values $options flags_map $flags
-
-
-    if { [file exists $arg_values(-lhs).without_power_pins.v] } {
-        set ::env(LEC_LHS_NETLIST) $arg_values(-lhs).without_power_pins.v
-    } else {
-        set ::env(LEC_LHS_NETLIST) $arg_values(-lhs)
-    }
-
-    if { [file exists $arg_values(-rhs).without_power_pins.v] } {
-        set ::env(LEC_RHS_NETLIST) $arg_values(-rhs).without_power_pins.v
-    } else {
-        set ::env(LEC_RHS_NETLIST) $arg_values(-rhs)
-    }
-    increment_index
-    TIMER::timer_start
-    set log [index_file $::env(synthesis_logs).equiv.log]
-    set lhs_rel [relpath . $::env(LEC_LHS_NETLIST)]
-    set rhs_rel [relpath . $::env(LEC_RHS_NETLIST)]
-    puts_info "Running LEC: '$lhs_rel' vs. '$rhs_rel' (log: [relpath . $log])..."
-
-    if { [catch {run_yosys_script $::env(SCRIPTS_DIR)/yosys/logic_equiv_check.tcl -indexed_log $log}] } {
-        puts_err "$::env(LEC_LHS_NETLIST) is not logically equivalent to $::env(LEC_RHS_NETLIST)."
-        TIMER::timer_stop
-        exec echo "[TIMER::get_runtime]" | python3 $::env(SCRIPTS_DIR)/write_runtime.py "logic equivalence check - yosys"
-        throw_error
-    }
-
-    puts_info "$::env(LEC_LHS_NETLIST) and $::env(LEC_RHS_NETLIST) are proven equivalent"
-    TIMER::timer_stop
-    exec echo "[TIMER::get_runtime]" | python3 $::env(SCRIPTS_DIR)/write_runtime.py "logic equivalence check - yosys"
 }
 
 proc generate_blackbox_verilog {inputs output {defines ""}} {
@@ -308,7 +272,7 @@ proc run_verilator {} {
         lappend arg_list {*}$output_file
     }
     lappend arg_list {*}$::env(VERILOG_FILES)
-    
+
     set incdirs ""
     if { [info exists ::env(VERILOG_INCLUDE_DIRS)] } {
         foreach incdir $::env(VERILOG_INCLUDE_DIRS) {
@@ -374,5 +338,3 @@ proc run_verilator {} {
         puts_info "$warnings_count warnings found by linter"
     }
 }
-
-package provide openlane 0.9

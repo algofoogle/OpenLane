@@ -54,8 +54,8 @@ proc set_netlist {args} {
     try_exec sed -i.bak -e "s/\\(set ::env(CURRENT_NETLIST)\\).*/\\1 $replace/" "$::env(GLB_CFG_FILE)"
     exec rm -f "$::env(GLB_CFG_FILE).bak"
 
-    if { [info exists flags_map(-lec)] && $::env(LEC_ENABLE) && [file exists $previous_netlist] } {
-        logic_equiv_check -lhs $previous_netlist -rhs $netlist
+    if { [info exists flags_map(-lec)] } {
+        puts_warn "-lec is deprecated (LEC functionality has been removed)"
     }
 }
 
@@ -130,8 +130,7 @@ proc prep_lefs {args} {
         if { [info exists ::env(METAL_LAYER_NAMES)] } {
             set ::env(TECH_METAL_LAYERS) $::env(METAL_LAYER_NAMES)
         } else {
-            try_exec $::env(OPENROAD_BIN) -exit -no_init -python\
-                $::env(SCRIPTS_DIR)/odbpy/lefutil.py get_metal_layers\
+            run_odbpy_script $::env(SCRIPTS_DIR)/odbpy/lefutil.py get_metal_layers\
                 -o $::env(TMP_DIR)/layers.list\
                 $arg_values(-tech_lef)
 
@@ -400,6 +399,42 @@ proc load_overrides {args} {
     }
 }
 
+proc handle_config_var_deprecation {args} {
+    # DEPRECATED CONFIGS
+    ## PDK
+    handle_deprecated_pdk_config SYNTH_MAX_TRAN MAX_TRANSITION_CONSTRAINT
+    handle_deprecated_pdk_config SYNTH_MAX_FANOUT MAX_FANOUT_CONSTRAINT
+    handle_deprecated_pdk_config SYNTH_CAP_LOAD OUTPUT_CAP_LOAD
+    handle_deprecated_pdk_config WIRE_RC_LAYER DATA_WIRE_RC_LAYER
+    handle_deprecated_pdk_config WIRE_RC_LAYER CLOCK_WIRE_RC_LAYER
+
+    ## Flow
+    handle_diode_insertion_strategy
+
+    handle_deprecated_config SYNTH_TOP_LEVEL SYNTH_ELABORATE_ONLY 0
+
+    handle_deprecated_config VERILATOR_RELATIVE_INCLUDES LINTER_RELATIVE_INCLUDES 1
+
+    handle_deprecated_config FP_HORIZONTAL_HALO FP_PDN_HORIZONTAL_HALO 10
+    handle_deprecated_config FP_VERTICAL_HALO FP_PDN_VERTICAL_HALO $::env(FP_PDN_HORIZONTAL_HALO)
+
+    handle_deprecated_config LIB_RESIZER_OPT RSZ_LIB
+    handle_deprecated_config UNBUFFER_NETS RSZ_DONT_TOUCH_RX "$^"
+
+    handle_deprecated_config RCX_SDC_FILE SIGNOFF_SDC_FILE
+    handle_deprecated_config PRIMARY_SIGNOFF_TOOL PRIMARY_GDSII_STREAMOUT_TOOL "magic"
+
+    ### Checkers/Quitting
+    handle_deprecated_config QUIT_ON_VERILATOR_WARNINGS QUIT_ON_LINTER_WARNINGS 0
+    handle_deprecated_config QUIT_ON_VERILATOR_ERRORS QUIT_ON_LINTER_ERRORS 1
+
+    ### Flow Control
+    handle_deprecated_config RUN_VERILATOR RUN_LINTER 1
+
+    ### PDN
+    handle_deprecated_config DESIGN_IS_CORE FP_PDN_MULTILAYER 1
+}
+
 proc prep {args} {
     set ::env(timer_start) [clock seconds]
     TIMER::timer_start
@@ -543,21 +578,26 @@ proc prep {args} {
         load_overrides -process_info_only $arg_values(-override_env)
     }
 
-    if { ! [info exists ::env(PDK_ROOT)] || $::env(PDK_ROOT) == "" } {
-        puts_err "PDK_ROOT is not specified. Please make sure you have it set."
-        exit -1
-    } else {
-        puts_info "PDK Root: $::env(PDK_ROOT)"
-    }
-
     if { ! [info exists ::env(PDK)] } {
-        puts_err "PDK is not specified."
-        exit -1
-    } else {
-        puts_info "Process Design Kit: $::env(PDK)"
-        puts_verbose "Setting PDKPATH to $::env(PDK_ROOT)/$::env(PDK)"
-        set ::env(PDKPATH) $::env(PDK_ROOT)/$::env(PDK)
+        set ::env(PDK) "sky130A"
     }
+    puts_info "Process Design Kit: $::env(PDK)"
+
+    if { ! [info exists ::env(PDK_ROOT)] || $::env(PDK_ROOT) == "" } {
+        set pdk_family [string range $::env(PDK) 0 [expr [string length $::env(PDK)]-2]]
+        set opdks_version [exec python3 $::env(OPENLANE_ROOT)/dependencies/tool.py open_pdks -f commit]
+        if { [catch {exec volare path --pdk $pdk_family $opdks_version} volare_pdk_root] } {
+            puts_err "PDK_ROOT is not specified. Please make sure you have it set."
+            exit -1
+        } else {
+            set ::env(PDK_ROOT) $volare_pdk_root
+            puts_info "Set PDK Root using Volare. If you haven't downloaded it yet, try 'volare fetch'."
+        }
+    }
+    puts_info "PDK Root: $::env(PDK_ROOT)"
+
+    puts_verbose "Setting PDKPATH to $::env(PDK_ROOT)/$::env(PDK)"
+    set ::env(PDKPATH) $::env(PDK_ROOT)/$::env(PDK)
 
     ## 3. PDK-Specific Config
     if { [info exists ::env(STD_CELL_LIBRARY)] } {
@@ -616,64 +656,6 @@ proc prep {args} {
 
     set ::env(OPENLANE_VERBOSE) $arg_values(-verbose)
 
-    # DEPRECATED CONFIGS
-    ## PDK
-    handle_deprecated_pdk_config SYNTH_MAX_TRAN MAX_TRANSITION_CONSTRAINT
-    handle_deprecated_pdk_config SYNTH_MAX_FANOUT MAX_FANOUT_CONSTRAINT
-    handle_deprecated_pdk_config SYNTH_CAP_LOAD OUTPUT_CAP_LOAD
-    handle_deprecated_pdk_config WIRE_RC_LAYER DATA_WIRE_RC_LAYER
-    handle_deprecated_pdk_config WIRE_RC_LAYER CLOCK_WIRE_RC_LAYER
-
-    ## Flow
-    handle_diode_insertion_strategy
-
-    handle_deprecated_config SYNTH_TOP_LEVEL SYNTH_ELABORATE_ONLY
-
-    handle_deprecated_config VERILATOR_RELATIVE_INCLUDES LINTER_RELATIVE_INCLUDES
-
-    handle_deprecated_config FP_HORIZONTAL_HALO FP_PDN_HORIZONTAL_HALO
-    handle_deprecated_config FP_VERTICAL_HALO FP_PDN_VERTICAL_HALO
-
-    handle_deprecated_config LIB_RESIZER_OPT RSZ_LIB
-    handle_deprecated_config UNBUFFER_NETS RSZ_DONT_TOUCH_RX
-
-    handle_deprecated_config RCX_SDC_FILE SIGNOFF_SDC_FILE
-    handle_deprecated_config PRIMARY_SIGNOFF_TOOL PRIMARY_GDSII_STREAMOUT_TOOL
-
-    ### Checkers/Quitting
-    handle_deprecated_config CHECK_ASSIGN_STATEMENTS QUIT_ON_ASSIGN_STATEMENTS
-    handle_deprecated_config CHECK_UNMAPPED_CELLS QUIT_ON_UNMAPPED_CELLS
-    handle_deprecated_config QUIT_ON_VERILATOR_WARNINGS QUIT_ON_LINTER_WARNINGS
-    handle_deprecated_config QUIT_ON_VERILATOR_ERRORS QUIT_ON_LINTER_ERRORS
-
-    ### Flow Control
-    handle_deprecated_config CLOCK_TREE_SYNTH RUN_CTS
-    handle_deprecated_config TAP_DECAP_INSERTION RUN_TAP_DECAP_INSERTION
-    handle_deprecated_config RUN_ROUTING_DETAILED RUN_DRT
-    handle_deprecated_config FILL_INSERTION RUN_FILL_INSERTION
-    handle_deprecated_config RUN_VERILATOR RUN_LINTER
-
-    ### PDN
-    handle_deprecated_config FP_PDN_RAILS_LAYER FP_PDN_RAIL_LAYER
-    handle_deprecated_config FP_PDN_UPPER_LAYER FP_PDN_HORIZONTAL_LAYER
-    handle_deprecated_config FP_PDN_LOWER_LAYER FP_PDN_VERTICAL_LAYER
-    handle_deprecated_config PDN_CFG FP_PDN_CFG
-
-    ### GLB_RT -> GRT (Document using ‡)
-    handle_deprecated_config GLB_RT_ALLOW_CONGESTION GRT_ALLOW_CONGESTION
-    handle_deprecated_config GLB_RT_OVERFLOW_ITERS GRT_OVERFLOW_ITERS
-    handle_deprecated_config GLB_RT_ANT_ITERS GRT_ANT_ITERS
-    handle_deprecated_config GLB_RT_ESTIMATE_PARASITICS GRT_ESTIMATE_PARASITICS
-    handle_deprecated_config GLB_RT_MAX_DIODE_INS_ITERS GRT_MAX_DIODE_INS_ITERS
-    handle_deprecated_config GLB_RT_OBS GRT_OBS
-    handle_deprecated_config GLB_RT_ADJUSTMENT GRT_ADJUSTMENT
-    handle_deprecated_config GLB_RT_MACRO_EXTENSION GRT_MACRO_EXTENSION
-    handle_deprecated_config GLB_RT_LAYER_ADJUSTMENTS GRT_LAYER_ADJUSTMENTS
-
-    ### Spelling (No need to document)
-    handle_deprecated_config CELL_PAD_EXECLUDE CELL_PAD_EXCLUDE
-    handle_deprecated_config SYNTH_CLOCK_UNCERTAINITY SYNTH_CLOCK_UNCERTAINTY
-
     #
     ############################
     # Prep directories and files
@@ -705,6 +687,10 @@ proc prep {args} {
 
     # file mkdir works like shell mkdir -p, i.e., its OK if it already exists
     file mkdir $::env(RESULTS_DIR) $::env(TMP_DIR) $::env(LOGS_DIR) $::env(REPORTS_DIR)
+
+    # must be called after RUN_DIR is created so deprecation warnings are
+    # properly set to file
+    handle_config_var_deprecation
 
     set run_subfolder_structure [list \
         synthesis\
@@ -882,8 +868,8 @@ proc prep {args} {
         file copy -force $::env(PDK_ROOT)/$::env(PDK)/SOURCES $::env(RUN_DIR)/PDK_SOURCES
     }
 
-    if { [info exists ::env(OPENLANE_VERSION) ] } {
-        try_exec echo "OpenLane $::env(OPENLANE_VERSION)" > $::env(RUN_DIR)/OPENLANE_VERSION
+    if { [info exists ::env(OPENLANE_COMMIT) ] } {
+        try_exec echo "OpenLane $::env(OPENLANE_COMMIT)" > $::env(RUN_DIR)/OPENLANE_COMMIT
     }
 
     if { [info exists ::env(EXTRA_GDS_FILES)] } {
@@ -1247,14 +1233,14 @@ proc run_antenna_check {args} {
 }
 
 proc run_irdrop_report {args} {
+    if { ![info exists ::env(VSRC_LOC_FILES)] } {
+        puts_warn "VSRC_LOC_FILES was not given a value, which may make the results of IR drop analysis inaccurate. If you are not integrating a top-level chip for manufacture, you may ignore this warning, otherwise, see the documentation for VSRC_LOC_FILES."
+    }
+
     increment_index
     TIMER::timer_start
     set log [index_file $::env(signoff_logs)/irdrop.log]
     puts_info "Creating IR Drop Report (log: [relpath . $log])..."
-
-    if { ![info exists ::env(VSRC_LOC_FILES)] } {
-        puts_warn "VSRC_LOC_FILES is not defined. The IR drop analysis will run, but the values may be inaccurate."
-    }
 
     set rpt [index_file $::env(signoff_reports)/irdrop]
 
@@ -1331,11 +1317,8 @@ proc save_final_views {args} {
 proc run_post_run_hooks {} {
     if { [file exists $::env(DESIGN_DIR)/hooks/post_run.py]} {
         puts_info "Running post run hook..."
-        set result [exec $::env(OPENROAD_BIN) -exit -no_init -python $::env(DESIGN_DIR)/hooks/post_run.py]
-        puts_info "$result"
+        run_odbpy_script $::env(DESIGN_DIR)/hooks/post_run.py
     } else {
         puts_verbose "No post-run hook found, skipping..."
     }
 }
-
-package provide openlane 0.9

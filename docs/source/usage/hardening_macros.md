@@ -21,7 +21,7 @@ Click on any variable name listed in this document to get its usage information.
 * [`VERILOG_FILES`](../reference/configuration.md#VERILOG_FILES)
 * [`CLOCK_PORT`](../reference/configuration.md#CLOCK_PORT)
 * [`CLOCK_PERIOD`](../reference/configuration.md#CLOCK_PERIOD)
-* [`DESIGN_IS_CORE`](../reference/configuration.md#DESIGN_IS_CORE) (You may leave it empty if true)
+* [`FP_PDN_MULTILAYER`](../reference/configuration.md#FP_PDN_MULTILAYER) (You may leave it empty if true)
 
 So, for example:
 
@@ -44,7 +44,7 @@ set ::env(DESIGN_NAME) {spm}
 
 set ::env(VERILOG_FILES) [glob $::env(DESIGN_DIR)/src/*.v]
 set ::env(CLOCK_PORT) {clk}
-set ::env(DESIGN_IS_CORE) {0}
+set ::env(FP_PDN_MULTILAYER) {0}
 ```
 
 </td>
@@ -207,8 +207,6 @@ You can control whether the magic DRC should be done on GDSII or on LEF/DEF abst
 You can run Antenna Checks using OpenROAD ARC or magic. This is controlled by `USE_ARC_ANTENNA_CHECK`. The magic antenna checker was more reliable at the time of writing this documentation but it comes with a huge runtime trade-off and the accuracy gain is not significant enough to accept that tradeoff; thus, the default is OpenROAD's ARC.
 
 You can control whether LVS should be run down to the device level or the cell level based on the type of the extraction. If you perform extraction on GDSII then it is going to be down to the device/transistor level, otherwise using the LEF/DEF views then it is going to be down to the cell/block level. This is controlled by `MAGIC_EXT_USE_GDS`.
-
-You can enable LEC on the different netlists by setting `LEC_ENABLE` to one, which should run logic verification after writing each intermediate netlist.
 
 A final summary report is produced by default as `<run-path>/reports/metrics.csv`, for more details about the contents of the report check [**Datapoint Definitions**](../reference/datapoint_definitions.md).
 

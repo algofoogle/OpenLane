@@ -19,7 +19,7 @@ proc extract_core_dims {args} {
 
     set out_tmp $::env(TMP_DIR)/dimensions.txt
 
-    try_exec $::env(OPENROAD_BIN) -exit -no_init -python $::env(SCRIPTS_DIR)/odbpy/defutil.py extract_core_dims\
+    run_odbpy_script $::env(SCRIPTS_DIR)/odbpy/defutil.py extract_core_dims\
         --output-data $out_tmp\
         --input-lef $::env(MERGED_LEF)\
         $::env(CURRENT_DEF)
@@ -75,7 +75,7 @@ proc init_floorplan {args} {
 
             set intermediate [index_file $::env(floorplan_tmpfiles)/minimized_pdn.txt]
 
-            try_exec $::env(OPENROAD_BIN) -exit -no_init -python $::env(SCRIPTS_DIR)/odbpy/snap_to_grid.py\
+            run_odbpy_script $::env(SCRIPTS_DIR)/odbpy/snap_to_grid.py\
                 --output $intermediate\
                 --input-lef $::env(MERGED_LEF)\
                 [expr {$core_width/8.0}] [expr {$core_height/8.0}] [expr {$core_width/4.0}] [expr {$core_height/4.0}]
@@ -88,7 +88,7 @@ proc init_floorplan {args} {
             set ::env(FP_PDN_VPITCH) [lindex $adjusted_values 2]
             set ::env(FP_PDN_HPITCH) [lindex $adjusted_values 3]
 
-            puts_warn "Current core area is too small for the power grid settings chosen. The power grid will be scaled down."
+            puts_warn "Current core area is too small for the power grid settings chosen. The power grid was scaled down to an offset of 1/8 the core width and height and a pitch of 1/4 the core width and height."
         }
     }
 
@@ -440,7 +440,7 @@ proc padframe_gen_batch {args} {
     }
 
     puts_info "Generating pad frame"
-    try_exec openroad -python -exit $::env(SCRIPTS_DIR)/odbpy/padringer.py\
+    run_odbpy_script $::env(SCRIPTS_DIR)/odbpy/padringer.py\
         --def-netlist $arg_values(-def) \
         {*}$prefix_argument \
         {*}$lefs_argument \
@@ -518,5 +518,3 @@ proc run_floorplan {args} {
 
     run_power_grid_generation
 }
-
-package provide openlane 0.9
